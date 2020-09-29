@@ -14,21 +14,24 @@ static char usage[] =
     "  -b [IP]\n"
     "    Set the source address to [IP].\n"
     "    Default: Let the system to determine.\n"
+    "  -c [IP] (REQUIRED)\n"
+    "    Connect to [IP].\n"
     "  -h\n"
     "    Display this message and quit.\n"
-    "  -l [port] (REQUIRED)\n"
-    "    Listen on [port].\n"
+    "  -p [port] (REQUIRED)\n"
+    "    Connect to [port].\n"
     "  -v\n"
     "    Display version information.\n";
 
 static sockaddr_in addr = {0};
+static sockaddr_in svaddr = {0};
 
 static int parseArguments(int argc, char **argv)
 {
     char c;
     int ret;
     
-    while ((c = getopt(argc, argv, "b:hl:v")) != EOF)
+    while ((c = getopt(argc, argv, "b:c:hp:v")) != EOF)
     {
         switch (c)
         {
@@ -39,12 +42,19 @@ static int parseArguments(int argc, char **argv)
                 return 1;
             }
             break;
+        case 'c':
+            if (inet_aton(optarg, &svaddr.sin_addr) == 0)
+            {
+                log.error("parseArguments: Invalid IP string %s", optarg);
+                return 1;
+            }
+            break;
         case 'h':
             printf(usage, argv[0]);
             return -1;
             break;
-        case 'l':
-            addr.sin_port = atoi(optarg);
+        case 'p':
+            svaddr.sin_port = atoi(optarg);
             break;
         case 'v':
             printf("%s\n", VERSION);
@@ -56,9 +66,15 @@ static int parseArguments(int argc, char **argv)
             break;
         }
     }
-    if (addr.sin_port == 0)
+
+    if (svaddr.sin_addr.s_addr == 0)
     {
-        log.error("parseArguments: Port to listen on not specified.");
+        log.error("parseArguments: Server address not specified.");
+        return 3;
+    }
+    if (svaddr.sin_port == 0)
+    {
+        log.error("parseArguments: Server port not specified.");
         return 3;
     }
 
@@ -68,26 +84,49 @@ static int parseArguments(int argc, char **argv)
 static long recvBuf[65536 / sizeof(long)], sendBuf[65536 / sizeof(long)];
 static Message *rmsg = (Message*)recvBuf, *smsg = (Message*)sendBuf;
 static int silent;
-static sockaddr_in currentClient;
 static int toAbort;
+static RWLock queueLock;
+static std::list<long> recvQueue;
 
 void sendMain(int fd)
 {
     char errbuf[64];
+    socklen_t len = sizeof(svaddr);
 
-    smsg->type = MessageType::DATA;
-    smsg->value = 0;
+    smsg->type = MessageType::INSTRUCTION;
+    smsg->value = Instructions::START;
+    if (sendto(fd, sendBuf, PAK_SIZE, 0, 
+        (struct sockaddr*)&svaddr, len) == -1)
+    {
+        log.error("sendMain: Socket broken when sending(%s).", 
+            Log::strerror(errbuf));
+        toAbort = 1;
+        return;
+    }
+    log.message("sendMain: Start instruction sent.", smsg->value++);
+
+    smsg->type = MessageType::ACK;
     while (!toAbort)
     {
-        socklen_t len = sizeof(currentClient);
-        if (currentClient.sin_addr.s_addr == 0)
+        long seq;
+        queueLock.writeLock();
+        if (recvQueue.empty())
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(20000));
+            queueLock.writeRelease();
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
             continue;
         }
-
+        else
+        {
+            seq = recvQueue.front();
+            recvQueue.pop_front();
+            queueLock.writeRelease();
+        }
+        
+        smsg->value = seq;
+        len = sizeof(svaddr);
 		if (sendto(fd, sendBuf, PAK_SIZE, 0, 
-			(struct sockaddr*)&currentClient, len) == -1)
+			(struct sockaddr*)&svaddr, len) == -1)
 		{
 			log.error("sendMain: Socket broken when sending(%s).", 
                 Log::strerror(errbuf));
@@ -95,21 +134,21 @@ void sendMain(int fd)
 			return;
 		}
 
-        log.message("sendMain: Packet %ld sent.", smsg->value++);
+        log.message("sendMain: ACK of packet %ld sent.", seq);
     }
 }
 
 void recvMain(int fd)
 {
     int size;
-    sockaddr_in clientInfo;
+    sockaddr_in recvInfo;
     char errbuf[64];
 
     while (true)
     {
-        socklen_t len = sizeof(currentClient);
+        socklen_t len = sizeof(recvInfo);
         if ((size = recvfrom(fd, recvBuf, 65536, 0, 
-            (struct sockaddr*)&clientInfo, &len)) == -1)
+            (struct sockaddr*)&recvInfo, &len)) == -1)
         {
             log.error("recvMain: Socket broken when receiving(%s).",
                 Log::strerror(errbuf));
@@ -119,26 +158,20 @@ void recvMain(int fd)
 
         switch (rmsg->type)
         {
-        case MessageType::INSTRUCTION:
-            if (rmsg->value == Instructions::START)
+        case MessageType::DATA:
+            if (svaddr.sin_addr.s_addr != recvInfo.sin_addr.s_addr ||
+                svaddr.sin_port != recvInfo.sin_port)
             {
-                log.message("recvMain: Received start instruction from %s:%d.", 
-                    inet_ntoa(clientInfo.sin_addr), clientInfo.sin_port);
-                currentClient = clientInfo;
-            }
-            break;
-        case MessageType::ACK:
-            if (currentClient.sin_addr.s_addr != clientInfo.sin_addr.s_addr ||
-                currentClient.sin_port != clientInfo.sin_port)
-            {
-                log.warning("recvMain: ACK of packet %ld from unknown receiver"
-                    "%s:%d.", rmsg->value, inet_ntoa(clientInfo.sin_addr), 
-                    clientInfo.sin_port);
+                log.warning("recvMain: Packet %ld from unknown Sender %s:%d.", 
+                    rmsg->value, inet_ntoa(recvInfo.sin_addr), 
+                    recvInfo.sin_port);
             }
             else
             {
-                log.message("recvMain: ACK of packet %ld received.", 
-                    rmsg->value);
+                log.message("recvMain: Packet %ld received.", rmsg->value);
+                queueLock.writeLock();
+                recvQueue.push_back(rmsg->value);
+                queueLock.writeRelease();
             }
             break;
         default:

@@ -1,22 +1,23 @@
 # ShiftAC's C/C++ makefile template for mkcproj 1.3
 
 TARGET := ../bin
-PACKAGE_PREFIX :=
+PACKAGE_PREFIX := UDPNetProbe
 CC := gcc
 CXX := g++
 CMACRO := 
 CXXMACRO := $(CMACRO)
-COMMONFLAGS := 
+COMMONFLAGS := -I include
 CFLAGS := $(CMACRO) $(COMMONFLAGS)
-CXXFLAGS := $(CXXMACRO) $(COMMONFLAGS)
-IGNORE_SRC :=
+CXXFLAGS := $(CXXMACRO) $(COMMONFLAGS) -std=c++14
+IGNORE_SRC := 
 GEN_SRC := 
-SRC := $(filter-out $(IGNORE_SRC) $(GEN_SRC),$(wildcard *.c) $(wildcard *.cc))
+PROG_SRC := Sender.cc Receiver.cc
+SRC := $(filter-out $(IGNORE_SRC) $(GEN_SRC) $(PROG_SRC),$(wildcard *.c) $(wildcard *.cc))
 OUT := $(addsuffix .o, $(basename $(SRC) $(GEN_SRC)))
 SCRIPTS_DIR := ./scripts
 BIN_SCRIPT := 
-LIB := 
-PROGS := $(BIN_SCRIPT)
+LIB := -lpthread
+PROGS := $(BIN_SCRIPT) $(basename $(PROG_SRC))
 PROGNAMES := $(addprefix $(PACKAGE_PREFIX)-,$(PROGS))
 
 $(PACKAGE_PREFIX)-%: %.cpp $(OUT)

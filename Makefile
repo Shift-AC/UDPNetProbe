@@ -13,11 +13,11 @@ init:
 
 .PHONY: install
 install:
-    cp bin/* $(INSTALL_PATH)/
+	cp bin/* $(INSTALL_PATH)/
 
 .PHONY: uninstall
 uninstall:
-    -rm $(INSTALL_PATH)/UDPNetProbe-*
+	-rm $(INSTALL_PATH)/UDPNetProbe-*
 
 .PHONY: clean
 clean:

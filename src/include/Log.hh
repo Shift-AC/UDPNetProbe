@@ -7,6 +7,7 @@
 
 #include <list>
 #include <thread>
+#include <utility>
 #include <vector>
 
 #include "Represent.hh"
@@ -49,7 +50,7 @@ private:
     class FixSizeMemoryPool
     {
     private:
-        Smart<char[]> buf;
+        UniqueSmart<char[]> buf;
         std::atomic<int> seq;
     public:
         const int len;
@@ -67,7 +68,7 @@ private:
     };
     
     int fd;
-    int verbose;
+    int verboseLevel;
     UniqueSmart<Worker> worker;
     FixSizeMemoryPool shortBuf;
     FixSizeMemoryPool longBuf;
@@ -76,14 +77,27 @@ private:
     Semaphore sem;
     timespec tst;
 
-    using PrefixString = char[PREFIX_LEN - 1];
+    struct PrefixString
+    {
+        char str[PREFIX_LEN - 1];
+    };
 
     RWLock prefixLock;
     std::vector<PrefixString> prefixes;
 
     template <typename ... Args>
     void issue(char *buf, int len, 
-        const char *prefix, const char *fmt, Args&& ... args);
+        const char *prefix, const char *fmt, Args&& ... args)
+    {
+        sprintf(buf, PREFIX_FMT, prefix, gettid(), getTimestamp());
+        snprintf(buf + PREFIX_LEN, len - PREFIX_LEN - 2, fmt,
+            std::forward<Args>(args) ..., "");
+
+        pendLock.writeLock();
+        pending.push_back({buf, len});
+        pendLock.writeRelease();
+        sem.release();
+    }
 
     inline double getTimestamp()
     {
@@ -92,7 +106,7 @@ private:
         return (ted.tv_sec - tst.tv_sec) + 
             (ted.tv_nsec - tst.tv_nsec) / 1000000000.0;
     }
-    inline unsigned gettid()
+    inline unsigned short gettid()
     {
         // OK for c++11, maybe BUGGY in later c++ standards.
     #ifdef SYS_gettid
@@ -123,8 +137,8 @@ public:
         prefixLock.writeLock();
         int prefixNum = prefixes.size();
         prefixes.push_back(tstr);
-        strncpy(prefixes[prefixNum], str, PREFIX_LEN - 2);
-        prefixes[prefixNum][PREFIX_LEN - 2] = 0;
+        strncpy(prefixes[prefixNum].str, str, PREFIX_LEN - 2);
+        prefixes[prefixNum].str[PREFIX_LEN - 2] = 0;
         prefixLock.writeRelease();
 
         return prefixNum;
@@ -133,7 +147,7 @@ public:
     {
         const char* prefix;
         prefixLock.readLock();
-        prefix = prefixes.at(num);
+        prefix = prefixes.at(num).str;
         prefixLock.readRelease();
 
         return prefix;
@@ -191,7 +205,7 @@ public:
     template <typename ... Args>
     inline void verbose(int level, const char *fmt, Args&& ... args)
     {
-        if (verbose >= level)
+        if (verboseLevel >= level)
         {
             shortLog(" Verbose ", fmt, std::forward<Args>(args) ...);
         }
@@ -199,7 +213,7 @@ public:
     template <typename ... Args>
     inline void longVerbose(int level, const char *fmt, Args&& ... args)
     {
-        if (verbose >= level)
+        if (verboseLevel >= level)
         {
             longLog(" Verbose ", fmt, std::forward<Args>(args) ...);
         }
@@ -212,7 +226,7 @@ public:
 
     Log(
         int fd = STDERR_FILENO, 
-        int verbose = 0,
+        int verboseLevel = 0,
         int shortBufLenLevel = DEF_SHORT_BUF_LEN_LEVEL, 
         int shortBufCountLevel = DEF_SHORT_BUF_CNT_LEVEL, 
         int longBufLenLevel = DEF_LONG_BUF_LEN_LEVEL, 

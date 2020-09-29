@@ -1,0 +1,6 @@
+# DO NOT DELETE
+
+Log.o: include/Log.hh /usr/include/string.h /usr/include/features.h
+Log.o: /usr/include/stdc-predef.h /usr/include/xlocale.h /usr/include/time.h
+Log.o: /usr/include/unistd.h /usr/include/getopt.h include/Represent.hh
+Log.o: include/RWLock.hh include/Semaphore.hh
