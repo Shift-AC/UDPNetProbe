@@ -49,7 +49,7 @@ static int parseArguments(int argc, char **argv)
             return -1;
             break;
         case 'l':
-            addr.sin_port = atoi(optarg);
+            addr.sin_port = htons(atoi(optarg));
             break;
         case 'v':
             log.message("Version: %s\n", VERSION);
@@ -116,10 +116,14 @@ void sendMain(int fd)
 		}
 
         log.verbose("sendMain: Packet %ld sent.", smsg->value++);
-        ++sent;
+		++sent;
         rec.write(rmsg->value, CompactRecorder::Type::SENT);
-        std::this_thread::sleep_until(st += std::chrono::microseconds(100));
-    }
+        std::this_thread::sleep_until(st += std::chrono::microseconds(90));
+		if (toAbort)
+		{
+			log.message("asdfkjasfjkwe");
+		}
+	}
     
     log.verbose("sendMain: %ld packets sent.", sent);
 }
@@ -149,7 +153,7 @@ void recvMain(int fd)
             if (rmsg->value == Instructions::START)
             {
                 log.message("recvMain: Received start instruction from %s:%d.", 
-                    inet_ntoa(clientInfo.sin_addr), clientInfo.sin_port);
+                    inet_ntoa(clientInfo.sin_addr), ntohs(clientInfo.sin_port));
                 currentClient = clientInfo;
             }
             break;
@@ -159,7 +163,7 @@ void recvMain(int fd)
             {
                 log.warning("recvMain: ACK of packet %ld from unknown receiver"
                     "%s:%d.", rmsg->value, inet_ntoa(clientInfo.sin_addr), 
-                    clientInfo.sin_port);
+                    ntohs(clientInfo.sin_port));
             }
             else
             {
@@ -173,6 +177,10 @@ void recvMain(int fd)
             // ignore
             break;
         }
+		if (toAbort)
+		{
+			log.message("fouehfuiowg3w");
+		}
     }
 
     log.message("recvMain: %ld packets ACKed.", acked);
@@ -212,8 +220,9 @@ int main(int argc, char **argv)
 
     if ((ret = bind(fd, (sockaddr*)&addr, sizeof(addr))) < 0)
     {
-        log.error("main: Cannot bind to specified address %s(%s).", 
-            inet_ntoa(addr.sin_addr), Log::strerror(errbuf));
+        log.error("main: Cannot bind to specified address %s:%d(%s).", 
+            inet_ntoa(addr.sin_addr), ntohs(addr.sin_port), 
+			Log::strerror(errbuf));
         return 3;
     }
 

@@ -60,7 +60,7 @@ static int parseArguments(int argc, char **argv)
             return -1;
             break;
         case 'p':
-            svaddr.sin_port = atoi(optarg);
+            svaddr.sin_port = htons(atoi(optarg));
             break;
         case 'v':
             log.message("Version %s\n", VERSION);
@@ -206,7 +206,7 @@ void recvMain(int fd)
             {
                 log.warning("recvMain: Packet %ld from unknown Sender %s:%d.", 
                     rmsg->value, inet_ntoa(recvInfo.sin_addr), 
-                    recvInfo.sin_port);
+                    ntohs(recvInfo.sin_port));
             }
             else
             {
@@ -265,8 +265,9 @@ int main(int argc, char **argv)
 
     if ((ret = bind(fd, (sockaddr*)&addr, sizeof(addr))) < 0)
     {
-        log.error("main: Cannot bind to specified address %s(%s).", 
-            inet_ntoa(addr.sin_addr), Log::strerror(errbuf));
+        log.error("main: Cannot bind to specified address %s:%d(%s).", 
+            inet_ntoa(addr.sin_addr), ntohs(addr.sin_port),
+			Log::strerror(errbuf));
         return 3;
     }
 
