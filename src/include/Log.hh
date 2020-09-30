@@ -45,7 +45,7 @@ class Log
 private:
     static const int TYPE_LEN = 11;
     static const int TID_LEN = 7;
-    static const int TIMESTAMP_LEN = 14;
+    static const int TIMESTAMP_LEN = 16;
     static const int PREFIX_LEN = TYPE_LEN + TID_LEN + TIMESTAMP_LEN + 2;
     static const char PREFIX_FMT[];
 

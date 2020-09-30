@@ -104,6 +104,7 @@ static std::list<long> recvQueue;
 
 void sendMain(int fd)
 {
+    long sent = 0;
     char errbuf[64];
     socklen_t len = sizeof(svaddr);
 
@@ -150,6 +151,7 @@ void sendMain(int fd)
                 return;
             }
             log.verbose("sendMain: ACK of packet %ld sent.", seq);
+            ++sent;
             rec.write(seq, CompactRecorder::Type::ACK_SENT);
         }
 
@@ -173,10 +175,13 @@ void sendMain(int fd)
             st = current;
         }
     }
+
+    log.message("sendMain: %ld ACKs sent.", sent);
 }
 
 void recvMain(int fd)
 {
+    long received = 0;
     int size;
     sockaddr_in recvInfo;
     char errbuf[64];
@@ -206,6 +211,7 @@ void recvMain(int fd)
             else
             {
                 log.verbose("recvMain: Packet %ld received.", rmsg->value);
+                ++received;
                 rec.write(rmsg->value, CompactRecorder::Type::RECEIVED);
                 queueLock.writeLock();
                 recvQueue.push_back(rmsg->value);
@@ -218,6 +224,7 @@ void recvMain(int fd)
         }
     }
 
+    log.message("recvMain: %ld packets received.", received);
 }
 
 int main(int argc, char **argv)

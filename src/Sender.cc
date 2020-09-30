@@ -84,6 +84,7 @@ static int toAbort;
 
 void sendMain(int fd)
 {
+    long sent = 0;
     char errbuf[64];
     auto st = std::chrono::system_clock::now();
 
@@ -112,12 +113,17 @@ void sendMain(int fd)
 		}
 
         log.verbose("sendMain: Packet %ld sent.", smsg->value++);
+        ++sent;
+        rec.write(rmsg->value, CompactRecorder::Type::SENT);
         std::this_thread::sleep_until(st += std::chrono::microseconds(100));
     }
+    
+    log.verbose("sendMain: %ld packets sent.", sent);
 }
 
 void recvMain(int fd)
 {
+    long acked = 0;
     int size;
     sockaddr_in clientInfo;
     char errbuf[64];
@@ -156,6 +162,8 @@ void recvMain(int fd)
             {
                 log.verbose("recvMain: ACK of packet %ld received.", 
                     rmsg->value);
+                ++acked;
+                rec.write(rmsg->value, CompactRecorder::Type::ACKED);
             }
             break;
         default:
@@ -164,6 +172,7 @@ void recvMain(int fd)
         }
     }
 
+    log.message("recvMain: %ld packets ACKed.", acked);
 }
 
 int main(int argc, char **argv)
