@@ -4,7 +4,7 @@ INSTALL_PATH := /bin
 
 .PHONY: all
 all: init clean
-	make -C src
+	$(MAKE) -C src
 
 .PHONY: init
 init:
@@ -23,4 +23,4 @@ uninstall:
 clean:
 	-rm bin/* -r
 	-rm temp/* -r
-	make -C src clean
+	$(MAKE) -C src clean

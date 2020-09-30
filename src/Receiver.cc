@@ -189,15 +189,23 @@ void recvMain(int fd)
     while (!toAbort)
     {
         socklen_t len = sizeof(recvInfo);
-        if ((size = recvfrom(fd, recvBuf, 65536, 0, 
+        if ((size = recvfrom(fd, recvBuf, 65536, MSG_DONTWAIT, 
             (struct sockaddr*)&recvInfo, &len)) == -1)
         {
-            log.error("recvMain: Socket broken when receiving(%s).",
-                Log::strerror(errbuf));
-            toAbort = 1;
-            return;
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                continue;
+            }
+            else
+            {
+                log.error("recvMain: Socket broken when receiving(%s).",
+                    Log::strerror(errbuf));
+                toAbort = 1;
+                return;
+            }
         }
-
+        
         switch (rmsg->type)
         {
         case MessageType::DATA:
@@ -263,6 +271,8 @@ int main(int argc, char **argv)
         return 2;
     }
 
+    addr.sin_family = AF_INET;
+    svaddr.sin_family = AF_INET;
     if ((ret = bind(fd, (sockaddr*)&addr, sizeof(addr))) < 0)
     {
         log.error("main: Cannot bind to specified address %s:%d(%s).", 

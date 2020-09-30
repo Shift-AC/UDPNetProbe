@@ -257,11 +257,11 @@ public:
         this->fd = fd;
     }
 
-    static char *strerror(char *buf)
+    static inline char *strerror(char *buf)
     {
         int num = errno;
-        sprintf(buf, "%d ", num);
-        if (strerror_r(num, buf + strlen(buf), 128));
+        char tmp[60];
+        sprintf(buf, "%d %s", num, strerror_r(num, tmp, 59));
         return buf;
     }
 };

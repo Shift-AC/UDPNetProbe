@@ -119,13 +119,9 @@ void sendMain(int fd)
 		++sent;
         rec.write(rmsg->value, CompactRecorder::Type::SENT);
         std::this_thread::sleep_until(st += std::chrono::microseconds(90));
-		if (toAbort)
-		{
-			log.message("asdfkjasfjkwe");
-		}
 	}
     
-    log.verbose("sendMain: %ld packets sent.", sent);
+    log.message("sendMain: %ld packets sent.", sent);
 }
 
 void recvMain(int fd)
@@ -138,13 +134,21 @@ void recvMain(int fd)
     while (!toAbort)
     {
         socklen_t len = sizeof(currentClient);
-        if ((size = recvfrom(fd, recvBuf, 65536, 0, 
+        if ((size = recvfrom(fd, recvBuf, 65536, MSG_DONTWAIT, 
             (struct sockaddr*)&clientInfo, &len)) == -1)
         {
-            log.error("recvMain: Socket broken when receiving(%s).",
-                Log::strerror(errbuf));
-            toAbort = 1;
-            return;
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                continue;
+            }
+            else
+            {
+                log.error("recvMain: Socket broken when receiving(%s).",
+                    Log::strerror(errbuf));
+                toAbort = 1;
+                return;
+            }
         }
 
         switch (rmsg->type)
@@ -218,6 +222,7 @@ int main(int argc, char **argv)
         return 2;
     }
 
+    addr.sin_family = AF_INET;
     if ((ret = bind(fd, (sockaddr*)&addr, sizeof(addr))) < 0)
     {
         log.error("main: Cannot bind to specified address %s:%d(%s).", 
