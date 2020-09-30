@@ -24,8 +24,8 @@ static char usage[] =
     "    Connect to [port].\n"
     "  -v\n"
     "    Display version information.\n"
-    "  -w [path]\n"
-    "    Print compact performance log to [path]. Print to stdout if [path]"
+    "  -w [path] (default none(no output))\n"
+    "    Print compact performance log to [path]. Print to stdout if [path]\n"
     "    is \"-\".\n";
 
 static sockaddr_in addr = {0};
@@ -205,7 +205,7 @@ void recvMain(int fd)
                 return;
             }
         }
-        
+
         switch (rmsg->type)
         {
         case MessageType::DATA:

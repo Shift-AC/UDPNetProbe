@@ -21,8 +21,8 @@ static char usage[] =
     "    Listen on [port].\n"
     "  -v\n"
     "    Display version information.\n"
-    "  -w [path]\n"
-    "    Print compact performance log to [path]. Print to stdout if [path]"
+    "  -w [path] (default none(no output))\n"
+    "    Print compact performance log to [path]. Print to stdout if [path]\n"
     "    is \"-\".\n";
 
 static sockaddr_in addr = {0};
@@ -115,9 +115,9 @@ void sendMain(int fd)
 			return;
 		}
 
-        log.verbose("sendMain: Packet %ld sent.", smsg->value++);
+        log.verbose("sendMain: Packet %ld sent.", smsg->value);
 		++sent;
-        rec.write(rmsg->value, CompactRecorder::Type::SENT);
+        rec.write(rmsg->value++, CompactRecorder::Type::SENT);
         std::this_thread::sleep_until(st += std::chrono::microseconds(90));
 	}
     
