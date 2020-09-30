@@ -4,6 +4,7 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#include <sys/syscall.h>
 
 #include <list>
 #include <thread>

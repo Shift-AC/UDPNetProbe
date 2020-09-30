@@ -98,7 +98,7 @@ void sendMain(int fd)
     smsg->value = Instructions::START;
     while (!started)
     {
-        if (sendto(fd, sendBuf, PAK_SIZE, 0, 
+        if (sendto(fd, sendBuf, sizeof(Message), 0, 
             (struct sockaddr*)&svaddr, len) == -1)
         {
             log.error("sendMain: Socket broken when sending(%s).", 
@@ -128,7 +128,7 @@ void sendMain(int fd)
             smsg->type = MessageType::ACK;
             smsg->value = seq;
             len = sizeof(svaddr);
-            if (sendto(fd, sendBuf, PAK_SIZE, 0, 
+            if (sendto(fd, sendBuf, sizeof(Message), 0, 
                 (struct sockaddr*)&svaddr, len) == -1)
             {
                 log.error("sendMain: Socket broken when sending(%s).", 
@@ -146,7 +146,7 @@ void sendMain(int fd)
             smsg->value = Instructions::START;
             for (int i = 0; i < 5; ++i)
             {
-                if (sendto(fd, sendBuf, PAK_SIZE, 0, 
+                if (sendto(fd, sendBuf, sizeof(Message), 0, 
                     (struct sockaddr*)&svaddr, len) == -1)
                 {
                     log.error("sendMain: Socket broken when sending(%s).", 
