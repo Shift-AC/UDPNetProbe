@@ -110,7 +110,7 @@ void sendMain(int fd)
 
     smsg->type = MessageType::INSTRUCTION;
     smsg->value = Instructions::START;
-    while (!started)
+    while (!started && !toAbort)
     {
         if (sendto(fd, sendBuf, sizeof(Message), 0, 
             (struct sockaddr*)&svaddr, len) == -1)
@@ -216,6 +216,7 @@ void recvMain(int fd)
                 queueLock.writeLock();
                 recvQueue.push_back(rmsg->value);
                 queueLock.writeRelease();
+                started = 1;
             }
             break;
         default:
@@ -240,7 +241,8 @@ int main(int argc, char **argv)
     char errbuf[64];
 
     signalNoRestart(SIGINT, sigHandler);
-    
+    log.message("This is UDPNetProbe Receiver, Version %s", VERSION);
+
     ret = parseArguments(argc, argv);
     if (ret < 0)
     {

@@ -189,6 +189,7 @@ int main(int argc, char **argv)
     char errbuf[64];
 
     signalNoRestart(SIGINT, sigHandler);
+    log.message("This is UDPNetProbe Sender, Version %s", VERSION);
 
     ret = parseArguments(argc, argv);
     if (ret < 0)
