@@ -1,3 +1,4 @@
+#include <signal.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -128,7 +129,7 @@ void recvMain(int fd)
     sockaddr_in clientInfo;
     char errbuf[64];
 
-    while (true)
+    while (!toAbort)
     {
         socklen_t len = sizeof(currentClient);
         if ((size = recvfrom(fd, recvBuf, 65536, 0, 
@@ -175,13 +176,19 @@ void recvMain(int fd)
     log.message("recvMain: %ld packets ACKed.", acked);
 }
 
+void sigHandler(int sig, siginfo_t *info, void *ptr)
+{
+    log.message("sigHandler: Signal %d received", sig);
+    toAbort = 1;
+}
+
 int main(int argc, char **argv)
 {
     int fd;
     int ret;
     char errbuf[64];
 
-	log.message("1");
+    signalNoRestart(SIGINT, sigHandler);
 
     ret = parseArguments(argc, argv);
     if (ret < 0)
@@ -193,8 +200,6 @@ int main(int argc, char **argv)
         log.error("main: Not recoverable, exit.");
         return 1;
     }
-
-	log.message("2");
 
     if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
     {

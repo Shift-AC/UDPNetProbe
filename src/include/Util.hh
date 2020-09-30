@@ -1,6 +1,7 @@
 #ifndef __UTIL_HH__
 #define __UTIL_HH__
 
+#include <signal.h>
 #include <stdio.h>
 #include <time.h>
 #include <unistd.h>
@@ -101,5 +102,8 @@ public:
         return ::write(fd, &rec, sizeof(Record)) < 0;
     }
 };
+
+typedef void (*sighandler)(int, siginfo_t*, void*);
+sighandler signalNoRestart(int signum, sighandler handler);
 
 #endif

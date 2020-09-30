@@ -186,7 +186,7 @@ void recvMain(int fd)
     sockaddr_in recvInfo;
     char errbuf[64];
 
-    while (true)
+    while (!toAbort)
     {
         socklen_t len = sizeof(recvInfo);
         if ((size = recvfrom(fd, recvBuf, 65536, 0, 
@@ -227,11 +227,19 @@ void recvMain(int fd)
     log.message("recvMain: %ld packets received.", received);
 }
 
+void sigHandler(int sig, siginfo_t *info, void *ptr)
+{
+    log.message("sigHandler: Signal %d received", sig);
+    toAbort = 1;
+}
+
 int main(int argc, char **argv)
 {
     int fd;
     int ret;
     char errbuf[64];
+
+    signalNoRestart(SIGINT, sigHandler);
     
     ret = parseArguments(argc, argv);
     if (ret < 0)
