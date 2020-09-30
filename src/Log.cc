@@ -13,6 +13,12 @@ Log::FixSizeMemoryPool::FixSizeMemoryPool(int lenLevel, int countLevel):
     buf = std::make_unique<char[]>(1 << (lenLevel + countLevel));
 }
 
+Log::~Log()
+{
+	toExit = 1;
+	worker->join();
+}
+
 char* Log::FixSizeMemoryPool::get()
 {
     int pos = seq++ & (count - 1);
@@ -21,9 +27,12 @@ char* Log::FixSizeMemoryPool::get()
 
 void Log::Worker::main(Log *log)
 {
-    while (1)
-    {
-        log->sem.issue();
+    do
+	{
+        if (!log->sem.tryIssue(10000))
+		{
+			continue;
+		}
 
         do
         {
@@ -49,6 +58,7 @@ void Log::Worker::main(Log *log)
                     }
                     else
                     {
+						nwritten = 0;
                         break;
                     }
                 }
@@ -58,6 +68,7 @@ void Log::Worker::main(Log *log)
         }
         while (log->sem.tryIssue(0));
     }
+	while (!log->toExit);
 }
 
 Log::Log(int fd, int verboseLevel, int shortBufLenLevel, 
@@ -65,7 +76,7 @@ Log::Log(int fd, int verboseLevel, int shortBufLenLevel,
     fd(fd), verboseLevel(verboseLevel), 
     worker(nullptr), shortBuf(shortBufLenLevel, shortBufCountLevel),
     longBuf(longBufLenLevel, longBufCountLevel), pendLock(), pending(), sem(0),
-    prefixLock(), prefixes()
+    prefixLock(), prefixes(), toExit(0)
 {
     clock_gettime(CLOCK_REALTIME_COARSE, &tst);
     

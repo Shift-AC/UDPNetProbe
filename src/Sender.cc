@@ -40,14 +40,14 @@ static int parseArguments(int argc, char **argv)
             }
             break;
         case 'h':
-            printf(usage, argv[0]);
+            log.message(usage, argv[0]);
             return -1;
             break;
         case 'l':
             addr.sin_port = atoi(optarg);
             break;
         case 'v':
-            printf("%s\n", VERSION);
+            log.message("Version: %s\n", VERSION);
             return -1;
             break;
         default:
@@ -160,7 +160,9 @@ int main(int argc, char **argv)
     int fd;
     int ret;
     char errbuf[64];
-    
+
+	log.message("1");
+
     ret = parseArguments(argc, argv);
     if (ret < 0)
     {
@@ -171,6 +173,8 @@ int main(int argc, char **argv)
         log.error("main: Not recoverable, exit.");
         return 1;
     }
+
+	log.message("2");
 
     if ((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
     {
@@ -185,10 +189,12 @@ int main(int argc, char **argv)
         return 3;
     }
 
+	log.message("main: Listening...");
+
     std::thread sender(sendMain, fd), receiver(recvMain, fd);
 
     sender.join();
     receiver.join();
 
-    return 0;
+    return toAbort * 4;
 }

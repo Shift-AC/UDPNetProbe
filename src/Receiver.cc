@@ -50,14 +50,14 @@ static int parseArguments(int argc, char **argv)
             }
             break;
         case 'h':
-            printf(usage, argv[0]);
+            log.message(usage, argv[0]);
             return -1;
             break;
         case 'p':
             svaddr.sin_port = atoi(optarg);
             break;
         case 'v':
-            printf("%s\n", VERSION);
+            log.message("Version %s\n", VERSION);
             return -1;
             break;
         default:

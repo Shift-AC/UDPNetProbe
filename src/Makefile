@@ -6,7 +6,7 @@ CC := gcc
 CXX := g++
 CMACRO := 
 CXXMACRO := $(CMACRO)
-COMMONFLAGS := -I include
+COMMONFLAGS := -I include -g -Og
 CFLAGS := $(CMACRO) $(COMMONFLAGS)
 CXXFLAGS := $(CXXMACRO) $(COMMONFLAGS) -std=c++14
 IGNORE_SRC := 

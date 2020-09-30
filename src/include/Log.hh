@@ -5,6 +5,7 @@
 #include <time.h>
 #include <unistd.h>
 #include <sys/syscall.h>
+#include <sys/types.h>
 
 #include <list>
 #include <thread>
@@ -86,6 +87,8 @@ private:
     RWLock prefixLock;
     std::vector<PrefixString> prefixes;
 
+	int toExit;
+
     template <typename ... Args>
     void issue(char *buf, int len, 
         const char *prefix, const char *fmt, Args&& ... args)
@@ -94,8 +97,10 @@ private:
         snprintf(buf + PREFIX_LEN, len - PREFIX_LEN - 2, fmt,
             std::forward<Args>(args) ..., "");
 
+		int slen = strlen(buf);
+		buf[slen] = '\n';
         pendLock.writeLock();
-        pending.push_back({buf, len});
+        pending.push_back({buf, slen + 1});
         pendLock.writeRelease();
         sem.release();
     }
@@ -111,7 +116,7 @@ private:
     {
         // OK for c++11, maybe BUGGY in later c++ standards.
     #ifdef SYS_gettid
-        return (unsigned)gettid();
+        return (unsigned)syscall(SYS_gettid);
     #else
         #warning \
             "SYS_gettid unavailable on this system, using pthread_self instead"
@@ -235,6 +240,8 @@ public:
 
     Log(const Log&) = delete;
 
+	~Log();
+
     inline void bind(int fd)
     {
         this->fd = fd;
@@ -244,7 +251,7 @@ public:
     {
         int num = errno;
         sprintf(buf, "%d ", num);
-        strerror_r(num, buf + strlen(buf), 128);
+        if (strerror_r(num, buf + strlen(buf), 128));
         return buf;
     }
 };
