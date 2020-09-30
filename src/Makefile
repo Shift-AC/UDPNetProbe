@@ -6,7 +6,7 @@ CC := gcc
 CXX := g++
 CMACRO := 
 CXXMACRO := $(CMACRO)
-COMMONFLAGS := -I include -g -Og
+COMMONFLAGS := -I include -g -Og -D VERSION='"0.1.0.$(shell date +%y%m%d-%H%M%S)"'
 CFLAGS := $(CMACRO) $(COMMONFLAGS)
 CXXFLAGS := $(CXXMACRO) $(COMMONFLAGS) -std=c++14
 IGNORE_SRC := 

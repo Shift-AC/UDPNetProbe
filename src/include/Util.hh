@@ -8,7 +8,9 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
-const char VERSION[] = "0.1.0.200928";
+#ifndef VERSION 
+#define VERSION "Undefined"
+#endif
 
 const int PAK_SIZE = 1400;
 
