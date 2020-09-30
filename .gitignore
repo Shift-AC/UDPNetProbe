@@ -1,6 +1,8 @@
 *.exe
 *.o
 UDPNetProbe-*
+.vscode/*
 bin/*
 test/*
 temp/*
+src/Makefile.dep

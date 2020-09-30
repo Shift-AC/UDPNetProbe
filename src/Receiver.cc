@@ -85,6 +85,7 @@ static long recvBuf[65536 / sizeof(long)], sendBuf[65536 / sizeof(long)];
 static Message *rmsg = (Message*)recvBuf, *smsg = (Message*)sendBuf;
 static int silent;
 static int toAbort;
+static int started;
 static RWLock queueLock;
 static std::list<long> recvQueue;
 
@@ -95,17 +96,21 @@ void sendMain(int fd)
 
     smsg->type = MessageType::INSTRUCTION;
     smsg->value = Instructions::START;
-    if (sendto(fd, sendBuf, PAK_SIZE, 0, 
-        (struct sockaddr*)&svaddr, len) == -1)
+    while (!started)
     {
-        log.error("sendMain: Socket broken when sending(%s).", 
-            Log::strerror(errbuf));
-        toAbort = 1;
-        return;
+        if (sendto(fd, sendBuf, PAK_SIZE, 0, 
+            (struct sockaddr*)&svaddr, len) == -1)
+        {
+            log.error("sendMain: Socket broken when sending(%s).", 
+                Log::strerror(errbuf));
+            toAbort = 1;
+            return;
+        }
+        log.message("sendMain: Start instruction sent.");
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
-    log.message("sendMain: Start instruction sent.", smsg->value++);
 
-    smsg->type = MessageType::ACK;
+    auto st = std::chrono::system_clock::now();
     while (!toAbort)
     {
         long seq;
@@ -113,28 +118,46 @@ void sendMain(int fd)
         if (recvQueue.empty())
         {
             queueLock.writeRelease();
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            continue;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
         else
         {
             seq = recvQueue.front();
             recvQueue.pop_front();
             queueLock.writeRelease();
+            smsg->type = MessageType::ACK;
+            smsg->value = seq;
+            len = sizeof(svaddr);
+            if (sendto(fd, sendBuf, PAK_SIZE, 0, 
+                (struct sockaddr*)&svaddr, len) == -1)
+            {
+                log.error("sendMain: Socket broken when sending(%s).", 
+                    Log::strerror(errbuf));
+                toAbort = 1;
+                return;
+            }
+            log.message("sendMain: ACK of packet %ld sent.", seq);
         }
-        
-        smsg->value = seq;
-        len = sizeof(svaddr);
-		if (sendto(fd, sendBuf, PAK_SIZE, 0, 
-			(struct sockaddr*)&svaddr, len) == -1)
-		{
-			log.error("sendMain: Socket broken when sending(%s).", 
-                Log::strerror(errbuf));
-			toAbort = 1;
-			return;
-		}
 
-        log.message("sendMain: ACK of packet %ld sent.", seq);
+        auto current = std::chrono::system_clock::now();
+        if (current - st > std::chrono::milliseconds(3000))
+        {
+            smsg->type = MessageType::INSTRUCTION;
+            smsg->value = Instructions::START;
+            for (int i = 0; i < 5; ++i)
+            {
+                if (sendto(fd, sendBuf, PAK_SIZE, 0, 
+                    (struct sockaddr*)&svaddr, len) == -1)
+                {
+                    log.error("sendMain: Socket broken when sending(%s).", 
+                        Log::strerror(errbuf));
+                    toAbort = 1;
+                    return;
+                }
+            }
+            log.message("sendMain: Periodic start instruction sent.");
+            st = current;
+        }
     }
 }
 

@@ -41,6 +41,11 @@
         "streambuf": "cpp",
         "thread": "cpp",
         "utility": "cpp",
-        "typeinfo": "cpp"
+        "typeinfo": "cpp",
+        "cstddef": "cpp",
+        "memory_resource": "cpp",
+        "optional": "cpp",
+        "string": "cpp",
+        "string_view": "cpp"
     }
 }

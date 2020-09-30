@@ -74,6 +74,7 @@ static int toAbort;
 void sendMain(int fd)
 {
     char errbuf[64];
+    auto st = std::chrono::system_clock::now();
 
     smsg->type = MessageType::DATA;
     smsg->value = 0;
@@ -82,10 +83,14 @@ void sendMain(int fd)
         socklen_t len = sizeof(currentClient);
         if (currentClient.sin_addr.s_addr == 0)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(20000));
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
             continue;
         }
-
+        else
+        {
+            st = std::chrono::system_clock::now();
+        }
+        
 		if (sendto(fd, sendBuf, PAK_SIZE, 0, 
 			(struct sockaddr*)&currentClient, len) == -1)
 		{
@@ -96,6 +101,7 @@ void sendMain(int fd)
 		}
 
         log.message("sendMain: Packet %ld sent.", smsg->value++);
+        std::this_thread::sleep_until(st += std::chrono::microseconds(100));
     }
 }
 
