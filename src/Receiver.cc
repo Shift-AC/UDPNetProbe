@@ -211,7 +211,10 @@ void recvMain(int fd)
             else
             {
                 log.verbose("recvMain: Packet %ld received.", rmsg->value);
-                ++received;
+                if (received++ == 0)
+                {
+                    log.verbose("recvMain: First packet received.");
+                }
                 rec.write(rmsg->value, CompactRecorder::Type::RECEIVED);
                 queueLock.writeLock();
                 recvQueue.push_back(rmsg->value);

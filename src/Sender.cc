@@ -87,6 +87,7 @@ void sendMain(int fd)
 {
     long sent = 0;
     char errbuf[64];
+    int init = 1;
     auto st = std::chrono::system_clock::now();
 
     smsg->type = MessageType::DATA;
@@ -99,9 +100,10 @@ void sendMain(int fd)
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
             continue;
         }
-        else
+        else if (init)
         {
             st = std::chrono::system_clock::now();
+            init = 0;
         }
         
 		if (sendto(fd, sendBuf, PAK_SIZE, 0, 
