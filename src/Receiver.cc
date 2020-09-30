@@ -2,6 +2,8 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #include <chrono>
 #include <thread>
@@ -21,17 +23,21 @@ static char usage[] =
     "  -p [port] (REQUIRED)\n"
     "    Connect to [port].\n"
     "  -v\n"
-    "    Display version information.\n";
+    "    Display version information.\n"
+    "  -w [path]\n"
+    "    Print compact performance log to [path]. Print to stdout if [path]"
+    "    is \"-\".\n";
 
 static sockaddr_in addr = {0};
 static sockaddr_in svaddr = {0};
+static CompactRecorder rec;
 
 static int parseArguments(int argc, char **argv)
 {
     char c;
     int ret;
     
-    while ((c = getopt(argc, argv, "b:c:hp:v")) != EOF)
+    while ((c = getopt(argc, argv, "b:c:hp:vw:")) != EOF)
     {
         switch (c)
         {
@@ -59,6 +65,13 @@ static int parseArguments(int argc, char **argv)
         case 'v':
             log.message("Version %s\n", VERSION);
             return -1;
+            break;
+        case 'w':
+            if ((ret = rec.init(optarg)) != 0)
+            {
+                log.error("parseArguments: Cannot open record file.");
+                return -1;
+            }
             break;
         default:
             log.error("parseArguments: Unrecognized option %c", c);
@@ -136,7 +149,8 @@ void sendMain(int fd)
                 toAbort = 1;
                 return;
             }
-            log.message("sendMain: ACK of packet %ld sent.", seq);
+            log.verbose("sendMain: ACK of packet %ld sent.", seq);
+            rec.write(seq, CompactRecorder::Type::ACK_SENT);
         }
 
         auto current = std::chrono::system_clock::now();
@@ -191,7 +205,8 @@ void recvMain(int fd)
             }
             else
             {
-                log.message("recvMain: Packet %ld received.", rmsg->value);
+                log.verbose("recvMain: Packet %ld received.", rmsg->value);
+                rec.write(rmsg->value, CompactRecorder::Type::RECEIVED);
                 queueLock.writeLock();
                 recvQueue.push_back(rmsg->value);
                 queueLock.writeRelease();

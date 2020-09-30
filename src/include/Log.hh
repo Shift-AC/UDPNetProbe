@@ -207,6 +207,16 @@ public:
     //{
     //    longError("Exception: %d, %s", e.geterrcode(), e.geterrmsg());
     //}
+    template <typename ... Args>
+    inline void verbose(const char *fmt, Args&& ... args)
+    {
+        verbose(1, fmt, std::forward<Args>(args) ...);
+    }
+    template <typename ... Args>
+    inline void longVerbose(const char *fmt, Args&& ... args)
+    {
+        longVerbose(1, fmt, std::forward<Args>(args) ...);
+    }
     
     template <typename ... Args>
     inline void verbose(int level, const char *fmt, Args&& ... args)

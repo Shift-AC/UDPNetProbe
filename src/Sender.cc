@@ -19,16 +19,20 @@ static char usage[] =
     "  -l [port] (REQUIRED)\n"
     "    Listen on [port].\n"
     "  -v\n"
-    "    Display version information.\n";
+    "    Display version information.\n"
+    "  -w [path]\n"
+    "    Print compact performance log to [path]. Print to stdout if [path]"
+    "    is \"-\".\n";
 
 static sockaddr_in addr = {0};
+static CompactRecorder rec;
 
 static int parseArguments(int argc, char **argv)
 {
     char c;
     int ret;
     
-    while ((c = getopt(argc, argv, "b:hl:v")) != EOF)
+    while ((c = getopt(argc, argv, "b:hl:vw:")) != EOF)
     {
         switch (c)
         {
@@ -49,6 +53,13 @@ static int parseArguments(int argc, char **argv)
         case 'v':
             log.message("Version: %s\n", VERSION);
             return -1;
+            break;
+        case 'w':
+            if ((ret = rec.init(optarg)) != 0)
+            {
+                log.error("parseArguments: Cannot open record file.");
+                return -1;
+            }
             break;
         default:
             log.error("parseArguments: Unrecognized option %c", c);
@@ -100,7 +111,7 @@ void sendMain(int fd)
 			return;
 		}
 
-        log.message("sendMain: Packet %ld sent.", smsg->value++);
+        log.verbose("sendMain: Packet %ld sent.", smsg->value++);
         std::this_thread::sleep_until(st += std::chrono::microseconds(100));
     }
 }
@@ -143,7 +154,7 @@ void recvMain(int fd)
             }
             else
             {
-                log.message("recvMain: ACK of packet %ld received.", 
+                log.verbose("recvMain: ACK of packet %ld received.", 
                     rmsg->value);
             }
             break;
