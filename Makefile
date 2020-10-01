@@ -3,7 +3,7 @@
 INSTALL_PATH := /bin
 
 .PHONY: all
-all: init clean
+all: init
 	$(MAKE) -C src
 
 .PHONY: init

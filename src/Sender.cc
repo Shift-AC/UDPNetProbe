@@ -117,7 +117,7 @@ void sendMain(int fd)
 
         log.verbose("sendMain: Packet %ld sent.", smsg->value);
 		++sent;
-        rec.write(rmsg->value++, CompactRecorder::Type::SENT);
+        rec.write(smsg->value++, CompactRecorder::Type::SENT);
         std::this_thread::sleep_until(st += std::chrono::microseconds(90));
 	}
     

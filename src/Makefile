@@ -11,7 +11,7 @@ CFLAGS := $(CMACRO) $(COMMONFLAGS)
 CXXFLAGS := $(CXXMACRO) $(COMMONFLAGS) -std=c++14
 IGNORE_SRC := 
 GEN_SRC := 
-PROG_SRC := Sender.cc Receiver.cc
+PROG_SRC := Sender.cc Receiver.cc LogReader.cc
 SRC := $(filter-out $(IGNORE_SRC) $(GEN_SRC) $(PROG_SRC),$(wildcard *.c) $(wildcard *.cc))
 OUT := $(addsuffix .o, $(basename $(SRC) $(GEN_SRC)))
 SCRIPTS_DIR := ./scripts
