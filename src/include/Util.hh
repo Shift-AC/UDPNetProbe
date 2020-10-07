@@ -13,8 +13,6 @@
 #define VERSION "Undefined"
 #endif
 
-const int PAK_SIZE = 1400;
-
 enum MessageType
 {
     RAW,
@@ -44,7 +42,8 @@ public:
         SENT,
         RECEIVED,
         ACK_SENT,
-        ACKED
+        ACKED,
+        IGNORED
     };
 
     struct Record

@@ -16,6 +16,7 @@ int main(int argc, char **argv)
     typeText.insert({CompactRecorder::Type::RECEIVED, "Received"});
     typeText.insert({CompactRecorder::Type::ACK_SENT, "ACK Sent"});
     typeText.insert({CompactRecorder::Type::ACKED, "ACKed"});
+    typeText.insert({CompactRecorder::Type::IGNORED, "Ignored"});
 
     RecordReader rd;
     CompactRecorder::Record rec;

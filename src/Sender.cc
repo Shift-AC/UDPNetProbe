@@ -17,8 +17,14 @@ static char usage[] =
     "    Default: Let the system to determine.\n"
     "  -h\n"
     "    Display this message and quit.\n"
+    "  -i [interval]\n"
+    "    Set the [interval] in microseconds between two data packets.\n"
+    "    Default: 100\n"
     "  -l [port] (REQUIRED)\n"
     "    Listen on [port].\n"
+    "  -s [size]\n"
+    "    Set the size of data packets.\n"
+    "    Default: 1400\n"
     "  -v\n"
     "    Display version information.\n"
     "  -w [path] (default none(no output))\n"
@@ -27,13 +33,15 @@ static char usage[] =
 
 static sockaddr_in addr = {0};
 static CompactRecorder rec;
+static int pakSize = 1400;
+static int interval = 100;
 
 static int parseArguments(int argc, char **argv)
 {
     char c;
     int ret;
     
-    while ((c = getopt(argc, argv, "b:hl:vw:")) != EOF)
+    while ((c = getopt(argc, argv, "b:hi:l:s:vw:")) != EOF)
     {
         switch (c)
         {
@@ -48,8 +56,14 @@ static int parseArguments(int argc, char **argv)
             log.message(usage, argv[0]);
             return -1;
             break;
+        case 'i':
+            interval = atoi(optarg);
+            break;
         case 'l':
             addr.sin_port = htons(atoi(optarg));
+            break;
+        case 's':
+            pakSize = atoi(optarg);
             break;
         case 'v':
             log.message("Version: %s\n", VERSION);
@@ -106,7 +120,7 @@ void sendMain(int fd)
             init = 0;
         }
         
-		if (sendto(fd, sendBuf, PAK_SIZE, 0, 
+		if (sendto(fd, sendBuf, pakSize, 0, 
 			(struct sockaddr*)&currentClient, len) == -1)
 		{
 			log.error("sendMain: Socket broken when sending(%s).", 
@@ -118,7 +132,8 @@ void sendMain(int fd)
         log.verbose("sendMain: Packet %ld sent.", smsg->value);
 		++sent;
         rec.write(smsg->value++, CompactRecorder::Type::SENT);
-        std::this_thread::sleep_until(st += std::chrono::microseconds(90));
+        std::this_thread::sleep_until(
+            st += std::chrono::microseconds(interval));
 	}
     
     log.message("sendMain: %ld packets sent.", sent);
