@@ -20,6 +20,9 @@ static char usage[] =
     "    Connect to [IP].\n"
     "  -h\n"
     "    Display this message and quit.\n"
+    "  -n [num]\n"
+    "    ACK every [num]-th packet.\n"
+    "    Default: 1\n"
     "  -p [port] (REQUIRED)\n"
     "    Connect to [port].\n"
     "  -v\n"
@@ -31,13 +34,14 @@ static char usage[] =
 static sockaddr_in addr = {0};
 static sockaddr_in svaddr = {0};
 static CompactRecorder rec;
+static int num = 1;
 
 static int parseArguments(int argc, char **argv)
 {
     char c;
     int ret;
     
-    while ((c = getopt(argc, argv, "b:c:hp:vw:")) != EOF)
+    while ((c = getopt(argc, argv, "b:c:hn:p:vw:")) != EOF)
     {
         switch (c)
         {
@@ -58,6 +62,9 @@ static int parseArguments(int argc, char **argv)
         case 'h':
             log.message(usage, argv[0]);
             return -1;
+            break;
+        case 'n':
+            num = atoi(optarg);
             break;
         case 'p':
             svaddr.sin_port = htons(atoi(optarg));
@@ -125,6 +132,7 @@ void sendMain(int fd)
     }
 
     auto st = std::chrono::system_clock::now();
+    int cnt = 0;
     while (!toAbort)
     {
         long seq;
@@ -139,6 +147,12 @@ void sendMain(int fd)
             seq = recvQueue.front();
             recvQueue.pop_front();
             queueLock.writeRelease();
+            if (++seq < num)
+            {
+                rec.write(seq, CompactRecorder::Type::ACK_SENT);
+                continue;
+            }
+
             smsg->type = MessageType::ACK;
             smsg->value = seq;
             len = sizeof(svaddr);
