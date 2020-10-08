@@ -109,7 +109,7 @@ void sendMain(int fd)
     while (!toAbort)
     {
         socklen_t len = sizeof(currentClient);
-        if (currentClient.sin_addr.s_addr == 0)
+        if (currentClient.sin_addr.s_addr == 0|| sent >= 1000000)
         {
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
             continue;
@@ -131,6 +131,10 @@ void sendMain(int fd)
 
         log.verbose("sendMain: Packet %ld sent.", smsg->value);
 		++sent;
+            if (sent == 1000000)
+            {
+                log.message("SENT");
+            }
         rec.write(smsg->value++, CompactRecorder::Type::SENT);
         std::this_thread::sleep_until(
             st += std::chrono::microseconds(interval));
@@ -196,10 +200,6 @@ void recvMain(int fd)
             // ignore
             break;
         }
-		if (toAbort)
-		{
-			log.message("fouehfuiowg3w");
-		}
     }
 
     log.message("recvMain: %ld packets ACKed.", acked);

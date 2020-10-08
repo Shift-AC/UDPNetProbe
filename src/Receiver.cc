@@ -147,9 +147,9 @@ void sendMain(int fd)
             seq = recvQueue.front();
             recvQueue.pop_front();
             queueLock.writeRelease();
-            if (++seq < num)
+            if (++cnt < num)
             {
-                rec.write(seq, CompactRecorder::Type::ACK_SENT);
+                rec.write(seq, CompactRecorder::Type::IGNORED);
                 continue;
             }
 
@@ -166,6 +166,7 @@ void sendMain(int fd)
             }
             log.verbose("sendMain: ACK of packet %ld sent.", seq);
             ++sent;
+            cnt = 0;
             rec.write(seq, CompactRecorder::Type::ACK_SENT);
         }
 
