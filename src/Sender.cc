@@ -77,7 +77,7 @@ static int parseArguments(int argc, char **argv)
             }
             break;
         default:
-            log.error("parseArguments: Unrecognized option %c", c);
+            log.error("parseArguments: Unrecognized option %c(%d)", c, c);
             return 2;
             break;
         }
